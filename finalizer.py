@@ -12,57 +12,55 @@ folder_in = "C:/Users/sries/onedrive/documents/programming/instron_automation/im
 
 class Finalizer():
 
-    def refineRows(self, x, y, size, pixelGrid, dark, red, color_range = 50):
-        '''creates a an array of rows where the end of each horizontal row is estimated to the edge between polymer and background (each row length varies)'''
-        #determine a baseline black or red color value for void (background) pixels
-        if len(pixelGrid) != 2*size:
-            section = [row[x-size:x+size+1] for row in pixelGrid[y-size:y+size+1]]
-        #to save on runtime during/if using recursion
-        else: section = pixelGrid
+    def refineRows(self, x, y, size, pixelGrid, dark, red, color_range=50):
+        '''Creates an array of rows where the end of each horizontal row is estimated to the edge between polymer and background (each row length varies).'''
         
+        # Determine a section to process based on the pixel grid size
+        section = pixelGrid if len(pixelGrid) == 2 * size else [row[x - size:x + size + 1] for row in pixelGrid[y - size:y + size + 1]]
         newGrid = []
+
         for row in section:
-            i = 0
             endPixel = 0
             newRow = []
-            while endPixel < 5 and i < len(row):
-                weighted_color = (row[i].getGreen()*1.5 + row[i].getBlue()*1.5 + row[i].getRed()*0.5)/3
-                #if its at the right darkness then check if its red enough
-                if weighted_color > dark and weighted_color < dark + color_range:
-                #if weighted_color > dark:
-                    if row[i].getRed() < red:
+            for pixel in row:
+                weighted_color = (pixel.getGreen() * 1.5 + pixel.getBlue() * 1.5 + pixel.getRed() * 0.5) / 3
+                
+                # Check if the color falls within the acceptable range
+                if dark < weighted_color < dark + color_range:
+                    if pixel.getRed() < red:
                         endPixel += 1
-                #otherwise check if its too bright overall
                     else:
-                        endPixel = 0
+                        endPixel = 0  # Reset end pixel count if the red value is sufficient
                 else:
-                    endPixel += 0
-                #otherwise its dark enough to be background
-                newRow.append(row[i])
-                i += 1
+                    endPixel += 0  # This line is unnecessary; could be omitted
+        
+                newRow.append(pixel)
+                if endPixel >= 5:  # Stop processing if we've observed enough non-red pixels
+                    break
+
             if len(newRow) > 18:
                 newGrid.append(newRow)
-        #organize into rows that could possibly have the cracktip
+        
+        # Recursion if there are not enough rows
         if len(newGrid) > 5:    
             return newGrid
-        else: return self.refineRows(x, y, size, pixelGrid, dark, red+1, color_range+1)
+        else:
+            return self.refineRows(x, y, size, pixelGrid, dark, red + 1, color_range + 1)
 
-    def finalize(self, newGrid, sweepDist = 14):
-        #sweep 15 rows above row and 15 rows below. do this for every row
-        curRow = 0
-        biggestSection = (0,None)
-        for row in newGrid:
-            voidLength = 0
-            #print("this is the length of each row" + str(len(row)))
-            if curRow > sweepDist and curRow < len(newGrid) - sweepDist:
-                for j in range(sweepDist*2):
-                    horizontal = newGrid[(curRow - sweepDist) + j]
-                    voidLength += len(horizontal)
+
+    def finalize(self, newGrid, sweepDist=14):
+        '''Sweeps rows above and below to find the longest sequence of rows.'''
+        biggestSection = (0, None)
+
+        for curRow in range(len(newGrid)):
+            if sweepDist < curRow < len(newGrid) - sweepDist:
+                voidLength = sum(len(newGrid[curRow - sweepDist + j]) for j in range(sweepDist * 2))
+
                 if voidLength > biggestSection[0]:
-                    biggestSection = (voidLength, row[-1])
-            curRow += 1
-        #return the pixel at the estimated cracktip
-        return biggestSection[1]
+                    biggestSection = (voidLength, newGrid[curRow][-1])  # Store the last pixel of the current row
+
+        return biggestSection[1]  # Return the pixel at the estimated crack tip
+
 
     def complete(self, pixelGrid, x, y, size, dark, green, sweepDist):
         newGrid = self.refineRows(x, y, size, pixelGrid, dark, green)

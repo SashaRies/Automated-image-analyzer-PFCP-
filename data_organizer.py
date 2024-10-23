@@ -21,95 +21,96 @@ class Data_organizer():
         return self.data_dict
 
     def update_data(self, name, location, upCorner, lowCorner):
-        '''adds or changes data based on the name of the image'''
+        '''Adds or changes data based on the name of the image.'''
         split_name = name.rstrip(".bmp").split('_')
-        load_val = split_name[2]
+        load_val = float(split_name[2])
 
-        #check if the image already has values in which case update them otherwise create a new data point
+        # Check if the image already exists in the dictionary
         if name not in self.d["name"]:
             self.d["name"].append(name)
-            self.d["load"].append(float(load_val))
+            self.d["load"].append(load_val)
             self.d["x"].append(location[0])
             self.d["y"].append(location[1])
 
-            #average corner coordinates
+            # Average corner coordinates
             corner = ((upCorner[0] + lowCorner[0])/2, (upCorner[1] + lowCorner[1])/2)
             self.d["corner"].append(corner)
             self.d["Corner up"].append(upCorner)
             self.d["Corner down"].append(lowCorner)
 
-            if len(split_name) > 5 and split_name[5] != "back":
-                add_cycle = int(split_name[5])
-            else: add_cycle = 0
+            add_cycle = int(split_name[5]) if len(split_name) > 5 and split_name[5] != "back" else 0
             self.d["cycle"].append(add_cycle)
-
+            
         else:
-            #find index of the image name to update all corresponding data
-            index = self.d["name"].index(name)
-            self.d["load"][index] = (float(load_val))
+            index = self.d["name"].index(name)  # Find index to update
+            self.d["load"][index] = load_val
             self.d["x"][index] = location[0]
             self.d["y"][index] = location[1]
 
-            #average corner coordinates
+            # Average corner coordinates
             corner = ((upCorner[0] + lowCorner[0])/2, (upCorner[1] + lowCorner[1])/2)
-            self.d["corner"].append(corner)
-            self.d["Corner up"].append(upCorner)
-            self.d["Corner down"].append(lowCorner)
+            self.d["corner"][index] = corner
+            self.d["Corner up"][index] = upCorner
+            self.d["Corner down"][index] = lowCorner
 
-            if len(split_name) > 5 and split_name[5] != "back":
-                add_cycle = int(split_name[5])
-            else: add_cycle = 0
+            add_cycle = int(split_name[5]) if len(split_name) > 5 and split_name[5] != "back" else 0
             self.d["cycle"][index] = add_cycle
 
-        #this is now updating and organizing data regardless of whether this image has been analyzed or not
-        self.dataList = [(self.d["load"][i], self.d["cycle"][i], self.d["name"][i], self.d["x"][i], self.d["y"][i], self.d["corner"][i],
-                        self.d["Corner up"][i], self.d["Corner down"][i]) for i in range(len(self.d["name"]))]
-        
-        #sort based on first value in each touple
+        # Update and organize data
+        self.dataList = [
+            (self.d["load"][i], self.d["cycle"][i], self.d["name"][i],
+            self.d["x"][i], self.d["y"][i], self.d["corner"][i],
+            self.d["Corner up"][i], self.d["Corner down"][i]) 
+            for i in range(len(self.d["name"]))
+        ]
+
+        # Sort based on the first element in each tuple
         self.dataList.sort(key=lambda x: x[0])
 
-        #clear each array and refill it with new data
+        # Clear each array in data_dict
         for key in self.data_dict:
             self.data_dict[key].clear()
-        
-        #now calculate the elapsed cycles for each image
-        prevLoad, startCycle, curCycle = 0, 0, 0
+
+        # Calculate elapsed cycles for each image
+        prevLoad, startCycle = 0, 0
 
         for touple in self.dataList:
             if touple[0] != prevLoad:
                 startCycle += 10000
                 prevLoad = touple[0]
+
             curCycle = touple[1] + startCycle
 
-            #add data so that there is front and back values for every cycle number (even though two seperate images)
+            # Add data for front and back values
             if touple[2].endswith("back.bmp"):
-                self.data_dict["X dist back"].append(touple[3] - touple[5][0])
-                self.data_dict["Y dist back"].append(touple[4] - touple[5][1])
-
-                self.data_dict["Crack back X"].append(touple[3])
-                self.data_dict["Crack back Y"].append(touple[4])
-
-                self.data_dict["LowCorner back X"].append(touple[7][0])
-                self.data_dict["LowCorner back Y"].append(touple[7][1])
-
-                self.data_dict["UpCorner back X"].append(touple[6][0])
-                self.data_dict["UpCorner back Y"].append(touple[6][1])
+                self._update_back_distances(touple)
             else:
-                self.data_dict["Image name"].append(touple[2])
-                self.data_dict["Total Cycles"].append(curCycle)
-                self.data_dict["Load min"].append(touple[0])
+                self._update_front_distances(touple, curCycle)
 
-                self.data_dict["X dist front"].append(touple[3] - touple[5][0])
-                self.data_dict["Y dist front"].append(touple[4] - touple[5][1])
+    def _update_back_distances(self, touple):
+        '''Update back distances in data_dict.'''
+        self.data_dict["X dist back"].append(touple[3] - touple[5][0])
+        self.data_dict["Y dist back"].append(touple[4] - touple[5][1])
+        self.data_dict["Crack back X"].append(touple[3])
+        self.data_dict["Crack back Y"].append(touple[4])
+        self.data_dict["LowCorner back X"].append(touple[7][0])
+        self.data_dict["LowCorner back Y"].append(touple[7][1])
+        self.data_dict["UpCorner back X"].append(touple[6][0])
+        self.data_dict["UpCorner back Y"].append(touple[6][1])
 
-                self.data_dict["Crack front X"].append(touple[3])
-                self.data_dict["Crack front Y"].append(touple[4])
-
-                self.data_dict["LowCorner front X"].append(touple[7][0])
-                self.data_dict["LowCorner front Y"].append(touple[7][1])
-
-                self.data_dict["UpCorner front X"].append(touple[6][0])
-                self.data_dict["UpCorner front Y"].append(touple[6][1])
+    def _update_front_distances(self, touple, curCycle):
+        '''Update front distances in data_dict.'''
+        self.data_dict["Image name"].append(touple[2])
+        self.data_dict["Total Cycles"].append(curCycle)
+        self.data_dict["Load min"].append(touple[0])
+        self.data_dict["X dist front"].append(touple[3] - touple[5][0])
+        self.data_dict["Y dist front"].append(touple[4] - touple[5][1])
+        self.data_dict["Crack front X"].append(touple[3])
+        self.data_dict["Crack front Y"].append(touple[4])
+        self.data_dict["LowCorner front X"].append(touple[7][0])
+        self.data_dict["LowCorner front Y"].append(touple[7][1])
+        self.data_dict["UpCorner front X"].append(touple[6][0])
+        self.data_dict["UpCorner front Y"].append(touple[6][1])
 
 
 
