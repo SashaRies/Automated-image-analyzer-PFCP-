@@ -8,7 +8,9 @@ from PIL import Image
 import numpy as np
 import os
 
-Folder_out = "C:/Users/sries/onedrive/documents/programming/instron_automation/Test_images"
+output_folder_name = "Test_images"
+current_directory = os.getcwd() #find directory
+Folder_out = current_directory + '/' + output_folder_name
 
 class Image_analyzer():
     '''This class takes images and manipulates them into a 2D array of pixel objects and vice versa'''
