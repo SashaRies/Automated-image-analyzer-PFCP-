@@ -1,5 +1,7 @@
 This repository contains all resources related to my automation project for analyzing images taken during Polymer Fatigue Crack Propagation tests. The goal of this project is to streamline and automate the image processing workflow, letting material science researchers quickly analyze polymer characteristics
 
+***Analysis_automated.py is the main file***
+
 
 Key Features:
 
